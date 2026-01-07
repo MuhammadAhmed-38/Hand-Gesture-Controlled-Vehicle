@@ -104,25 +104,24 @@ Hand gesture/
 
 ---
 
-## ▶️ System Demonstration Videos
+## ▶️ System Demonstration (GIF Preview)
 
-**Vehicle Movement Demonstratio**
+### Vehicle Movement
 <p align="center">
   <a href="Simulation_Video/Vehicle_Movement_small.mp4">
-    <img src="Results_Images/Gesture_Control_Vehicle.png" width="420">
+    <img src="gifs/Vehicle_Movement_Preview.gif" width="520">
   </a>
   <br>
-  <em>Click image to watch complete system demonstration</em>
+  <em>Vehicle movement controlled using hand gestures (click GIF to open full video)</em>
 </p>
 
-
-**Complete System Demonstratio**
+### Complete System Demonstration
 <p align="center">
   <a href="Simulation_Video/Complete_small.mp4">
-    <img src="Results_Images/Gesture_Control_Vehicle.png" width="420">
+    <img src="gifs/Complete_Preview.gif" width="520">
   </a>
   <br>
-  <em>Figure 14: Click image to watch complete system demonstration</em>
+  <em>Complete system demonstration (click GIF to open full video)</em>
 </p>
 
 ---
