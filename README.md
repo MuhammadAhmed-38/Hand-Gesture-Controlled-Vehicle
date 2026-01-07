@@ -106,13 +106,11 @@ Hand gesture/
 
 ## ▶️ System Demonstration Videos
 
-** ▶ Vehicle Movement Demonstratio**
+**Vehicle Movement Demonstratio**
+[Click here to watch the full demo](Simulation_Video/Vehicle_Movement_small.mp4)
 
-	[Click here to watch the full demo](Simulation_Video/Vehicle_Movement_small.mp4)
-
-** ▶ ️ Complete System Demonstratio**
-
-	[Click here to watch the full demo](Simulation_Video/Complete_small.mp4)
+**Complete System Demonstratio**
+[Click here to watch the full demo](Simulation_Video/Complete_small.mp4)
 
 ---
 
