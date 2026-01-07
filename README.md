@@ -107,10 +107,23 @@ Hand gesture/
 ## ▶️ System Demonstration Videos
 
 **Vehicle Movement Demonstratio**
-[Click here to watch the full demo](Simulation_Video/Vehicle_Movement_small.mp4)
+<p align="center">
+  <a href="Simulation_Video/Vehicle_Movement_small.mp4">
+    <img src="Results_Images/Gesture_Control_Vehicle.png" width="420">
+  </a>
+  <br>
+  <em>Click image to watch complete system demonstration</em>
+</p>
+
 
 **Complete System Demonstratio**
-[Click here to watch the full demo](Simulation_Video/Complete_small.mp4)
+<p align="center">
+  <a href="Simulation_Video/Complete_small.mp4">
+    <img src="Results_Images/Gesture_Control_Vehicle.png" width="420">
+  </a>
+  <br>
+  <em>Figure 14: Click image to watch complete system demonstration</em>
+</p>
 
 ---
 
