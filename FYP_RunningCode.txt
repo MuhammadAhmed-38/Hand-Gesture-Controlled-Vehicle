@@ -1,0 +1,586 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+
+# =========================
+# RECEIVER CODE
+# =========================
+
+// RECEIVER FINAL CODE
+#include <RH_ASK.h>
+#include <SPI.h> // Not actualy used but needed to compile
+#include <AFMotor.h>
+
+AF_DCMotor motor1(1);
+AF_DCMotor motor2(2);
+AF_DCMotor motor3(3);
+AF_DCMotor motor4(4);
+
+const int TRIG_PIN = A2; // Arduino pin connected to Ultrasonic Sensor's TRIG pin
+const int ECHO_PIN = A3; // Arduino pin connected to Ultrasonic Sensor's ECHO pin
+const int LED_PIN  = A4;
+const int DISTANCE_THRESHOLD = 50; // centimeters
+float duration_us, distance_cm;   // variables will change:
+
+RH_ASK driver;
+
+void setup()
+{
+  pinMode(A0,INPUT);
+  pinMode(A1,INPUT);
+    Serial.begin(9600);  // Debugging only
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(TRIG_PIN, OUTPUT); // set arduino pin to output mode
+    pinMode(ECHO_PIN, INPUT);  // set arduino pin to input mode
+    if (!driver.init())
+         Serial.println("init failed");
+}
+
+void loop()
+{
+  // generate 10-microsecond pulse to TRIG pin
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // measure duration of pulse from ECHO pin
+  duration_us = pulseIn(ECHO_PIN, HIGH);
+  // calculate the distance
+  distance_cm = 0.017 * duration_us;
+
+  motor1.setSpeed(255);
+  motor2.setSpeed(255);
+  motor3.setSpeed(255);
+  motor4.setSpeed(255);
+  
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+  motor3.run(RELEASE);
+  motor4.run(RELEASE); 
+  digitalWrite(LED_PIN, LOW);
+   
+  uint8_t buf[8];
+  uint8_t buflen = sizeof(buf);
+  String x;
+  if (driver.recv(buf, &buflen)) // Non-blocking
+  {
+    int i;
+    // Message with a good checksum received, dump it.
+    Serial.print(" Message Received: ");
+    x=((String)(char*)buf);
+    x.trim();
+    Serial.println(x+ " :"+x.length()); 
+    if(distance_cm < DISTANCE_THRESHOLD)
+    {
+        motor1.setSpeed(255);
+        motor2.setSpeed(255);
+        motor3.setSpeed(255);
+        motor4.setSpeed(255);  
+        motor1.run(RELEASE);
+        motor2.run(RELEASE);
+        motor3.run(RELEASE);
+        motor4.run(RELEASE);
+        Serial.println("Distance is too short! Breaks applied...");
+        digitalWrite(LED_PIN,HIGH);
+    }
+    
+  else
+  {  
+    if(x=="Forward!")
+      {
+          Serial.println("MOVING FORWARD");
+          motor4.setSpeed(250);
+          motor4.setSpeed(250);
+          motor4.setSpeed(250);
+          motor4.setSpeed(250);
+        
+          motor1.run(FORWARD);
+          motor2.run(FORWARD); 
+          motor3.run(FORWARD);
+          motor4.run(FORWARD);
+          delay(1000);
+        }
+               
+    else if(x=="Backward")
+    {
+          Serial.println("MOVING BACKWARD");
+
+          motor1.setSpeed(2000);
+          motor2.setSpeed(2000);
+          motor3.setSpeed(200);
+          motor4.setSpeed(200);
+        
+          motor1.run(BACKWARD);
+          motor2.run(BACKWARD); 
+          motor3.run(BACKWARD);
+          motor4.run(BACKWARD);
+        digitalWrite(LED_PIN,HIGH);
+          delay(1000);
+        }      
+    else if(x=="*Right!*")
+    {  
+      Serial.println("TURNING TOWARDS RIGHT SIDE"); 
+      motor1.setSpeed(2000);
+      motor2.setSpeed(2000);
+      motor3.setSpeed(2000);
+      motor4.setSpeed(2000);
+
+        motor1.run(FORWARD);
+        motor2.run(BACKWARD);
+        motor3.run(BACKWARD);
+        motor4.run(FORWARD);
+      delay(1000);
+    }
+    else if(x=="**Left**")
+    { 
+      Serial.println("TURNING TOWARDS LEFT SIDE");  
+        motor1.setSpeed(2000);
+        motor2.setSpeed(2000);
+        motor3.setSpeed(2000);
+        motor4.setSpeed(2000);
+
+        motor1.run(BACKWARD);
+        motor2.run(FORWARD);
+        motor3.run(FORWARD);
+        motor4.run(BACKWARD);
+        delay(1000);
+    }
+  
+    else if(x=="**Stop**")
+    {  
+        Serial.println("BREAK");
+        motor1.setSpeed(255);
+        motor2.setSpeed(255);
+        motor3.setSpeed(255);
+        motor4.setSpeed(255);
+ 
+        motor1.run(RELEASE);
+        motor2.run(RELEASE); 
+        motor3.run(RELEASE);
+        motor4.run(RELEASE);
+        delay(1000);
+    }   
+  }
+  } 
+}
+
+
+
+
+
+
+
+
+
+
+# =========================
+# TRANSMITTER CODE
+# =========================
+
+// 7 Gestures Code
+#include <RH_ASK.h>
+#include <SPI.h> // Not actually used but needed to compile
+#include <AFMotor.h>
+
+// Ultrasonic Sensor Constants
+const int TRIG_PIN = A2; // Arduino pin connected to Ultrasonic Sensor's TRIG pin
+const int ECHO_PIN = A3; // Arduino pin connected to Ultrasonic Sensor's ECHO pin
+const int DISTANCE_THRESHOLD = 10; // centimeters
+
+// Motor Constants
+AF_DCMotor motor1(1);
+AF_DCMotor motor2(2);
+AF_DCMotor motor3(3);
+AF_DCMotor motor4(4);
+
+// RF Receiver Constants
+const int LED_PIN = A5;
+RH_ASK driver;
+
+float duration_us, distance_cm; // variables will change:
+
+void setup()
+{
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  Serial.begin(9600); // Debugging only
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(TRIG_PIN, OUTPUT); // set Arduino pin to output mode
+  pinMode(ECHO_PIN, INPUT);  // set Arduino pin to input mode
+
+  if (!driver.init())
+    Serial.println("init failed");
+}
+
+void stopMotors()
+{
+  motor1.setSpeed(250);
+  motor2.setSpeed(250);
+  motor3.setSpeed(250);
+  motor4.setSpeed(250);
+
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+  motor3.run(RELEASE);
+  motor4.run(RELEASE);
+  digitalWrite(LED_PIN, HIGH);
+}
+
+void loop()
+{
+  digitalWrite(TRIG_PIN, HIGH); // generate 10-microsecond pulse to TRIG pin
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  duration_us = pulseIn(ECHO_PIN, HIGH); // measure duration of pulse from ECHO pin
+  distance_cm = 0.017 * duration_us;    // calculate the distance
+    // print the value to Serial Monitor
+  Serial.print("distance: ");
+  Serial.print(distance_cm);
+  Serial.println(" cm");
+
+
+  if (distance_cm < DISTANCE_THRESHOLD)
+  {
+    stopMotors();
+    digitalWrite(LED_PIN, HIGH); // turn on LED
+    delay(1000);
+  }
+  else
+  {
+    digitalWrite(LED_PIN, LOW); // turn off LED
+
+    uint8_t buf[8];
+    uint8_t buflen = sizeof(buf);
+    String x;
+    if (driver.recv(buf, &buflen)) // Non-blocking
+    {
+      int i;
+      // Message with a good checksum received, dump it.
+      Serial.print(" Message Received: ");
+      x = ((String)(char *)buf);
+      x.trim();
+      Serial.println(x + " :" + x.length());
+
+      if (x == "Forward!")
+      {
+        Serial.println("MOVING FORWARD");
+        motor3.setSpeed(500);
+        motor4.setSpeed(500);
+
+        motor3.run(FORWARD);
+        motor4.run(FORWARD);
+        delay(5000);
+      }
+      else if (x == "Backward")
+      {
+        Serial.println("MOVING BACKWARD");
+        motor3.setSpeed(500);
+        motor4.setSpeed(500);
+
+        motor3.run(BACKWARD);
+        motor4.run(BACKWARD);
+        delay(3000);
+      }
+      else if (x == "RightFor")
+      {
+        Serial.println("TURNING TOWARDS RIGHT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor1.run(FORWARD);
+        motor4.run(FORWARD);
+        motor2.run(FORWARD);
+        motor3.run(FORWARD);
+        delay(5000);
+      }
+      else if (x == "LeftForw")
+      {
+        Serial.println("TURNING TOWARDS LEFT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor4.run(FORWARD);
+        motor3.run(FORWARD);
+        motor2.run(BACKWARD);
+        motor1.run(BACKWARD);
+        delay(5000);
+      }
+      else if (x == "LeftBack")
+      {
+        Serial.println("REVERSE LEFT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor4.run(BACKWARD);
+        motor3.run(BACKWARD);
+        motor2.run(BACKWARD);
+        motor1.run(BACKWARD);
+        delay(5000);
+      }
+      else if (x == "RightBac")
+      {
+        Serial.println("REVERSE RIGHT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor4.run(BACKWARD);
+        motor3.run(BACKWARD);
+        motor2.run(FORWARD);
+        motor1.run(FORWARD);
+        delay(5000);
+      }
+      else if (x == "**Stop**")
+      {
+        Serial.println("BREAK");
+        stopMotors();
+        delay(1000);
+      }
+    }
+  }
+}
+
+
+
+// With Wipers
+#include <RH_ASK.h>
+#include <AFMotor.h>
+#include <ServoTimer2.h>
+
+// Ultrasonic Sensor Constants
+const int TRIG_PIN = A2;
+const int ECHO_PIN = A3;
+const int DISTANCE_THRESHOLD = 10;
+
+// Motor Constants
+AF_DCMotor motor1(1);
+AF_DCMotor motor2(2);
+AF_DCMotor motor3(3);
+AF_DCMotor motor4(4);
+
+// RF Receiver Constants
+const int LED_PIN = A5;
+RH_ASK driver;
+
+// Rain Sensor Constants
+ServoTimer2 myservo;
+ServoTimer2 myservo1;
+int pos = 0;
+int sensorValue = 0;
+
+void setup()
+{
+  pinMode(A0, INPUT);
+  pinMode(A1, INPUT);
+  Serial.begin(9600);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  myservo.attach(A4);
+  myservo1.attach(10);
+
+  if (!driver.init())
+    Serial.println("RF receiver init failed");
+}
+
+void stopMotors()
+{
+  motor1.setSpeed(250);
+  motor2.setSpeed(250);
+  motor3.setSpeed(250);
+  motor4.setSpeed(250);
+
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+  motor3.run(RELEASE);
+  motor4.run(RELEASE);
+  digitalWrite(LED_PIN, HIGH);
+}
+
+void loop()
+{
+  // Ultrasonic sensor distance measurement
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  unsigned long duration_us = pulseIn(ECHO_PIN, HIGH);
+  float distance_cm = 0.017 * duration_us;
+  Serial.print("Distance: ");
+  Serial.print(distance_cm);
+  Serial.println(" cm");
+
+  // Rain sensor reading
+  sensorValue = analogRead(A0);
+  Serial.print("Rain Sensor Value: ");
+  Serial.println(sensorValue);
+
+  // Hand Gesture Control with Ultrasonic Sensor
+  if (distance_cm < DISTANCE_THRESHOLD)
+  {
+    stopMotors();
+    delay(1000);
+  }
+  else
+  {
+    digitalWrite(LED_PIN, LOW);
+
+    uint8_t buf[8];
+    uint8_t buflen = sizeof(buf);
+    String x;
+    if (driver.recv(buf, &buflen))
+    {
+      int i;
+      // Message with a good checksum received, dump it.
+      Serial.print("Message Received: ");
+      x = ((String)(char *)buf);
+      x.trim();
+      Serial.println(x + " :" + x.length());
+
+      if (x == "Forward!")
+      {
+        Serial.println("MOVING FORWARD");
+        motor3.setSpeed(500);
+        motor4.setSpeed(500);
+
+        motor3.run(FORWARD);
+        motor4.run(FORWARD);
+        delay(5000);
+      }
+      else if (x == "Backward")
+      {
+        Serial.println("MOVING BACKWARD");
+        motor3.setSpeed(500);
+        motor4.setSpeed(500);
+
+        motor3.run(BACKWARD);
+        motor4.run(BACKWARD);
+        delay(3000);
+      }
+      else if (x == "RightFor")
+      {
+        Serial.println("TURNING TOWARDS RIGHT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor1.run(FORWARD);
+        motor4.run(FORWARD);
+        motor2.run(FORWARD);
+        motor3.run(FORWARD);
+        delay(5000);
+      }
+      else if (x == "LeftForw")
+      {
+        Serial.println("TURNING TOWARDS LEFT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor4.run(FORWARD);
+        motor3.run(FORWARD);
+        motor2.run(BACKWARD);
+        motor1.run(BACKWARD);
+        delay(5000);
+      }
+      else if (x == "LeftBack")
+      {
+        Serial.println("REVERSE LEFT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor4.run(BACKWARD);
+        motor3.run(BACKWARD);
+        motor2.run(BACKWARD);
+        motor1.run(BACKWARD);
+        delay(5000);
+      }
+      else if (x == "RightBac")
+      {
+        Serial.println("REVERSE RIGHT SIDE");
+        motor1.setSpeed(500);
+        motor2.setSpeed(500);
+        motor4.setSpeed(500);
+        motor3.setSpeed(500);
+
+        motor4.run(BACKWARD);
+        motor3.run(BACKWARD);
+        motor2.run(FORWARD);
+        motor1.run(FORWARD);
+        delay(5000);
+      }
+      else if (x == "**Stop**")
+      {
+        Serial.println("BREAK");
+        stopMotors();
+        delay(1000);
+      }
+    }
+  }
+
+  // Rain Sensor Controlled Servo Motors
+  if (sensorValue > 800)
+  {
+    myservo.write(0);
+    myservo1.write(0);
+    delay(1000);
+  }
+  else if (sensorValue <= 800 && sensorValue > 600)
+  {
+    for (pos = 0; pos <= 120; pos += 1)
+    {
+      myservo.write(pos);
+      myservo1.write(pos);
+      delay(3);
+    }
+    for (pos = 120; pos >= 0; pos -= 1)
+    {
+      myservo.write(pos);
+      myservo1.write(pos);
+      delay(3);
+    }
+    delay(2000);
+  }
+  else if (sensorValue <= 600 && sensorValue > 460)
+  {
+    for (pos = 0; pos <= 120; pos += 1)
+    {
+      myservo.write(pos);
+      myservo1.write(pos);
+      delay(3);
+    }
+    for (pos = 120; pos >= 0; pos -= 1)
+    {
+      myservo.write(pos);
+      myservo1.write(pos);
+      delay(3);
+    }
+    delay(1000);
+  }
+  else if (sensorValue < 460)
+  {
+    for (pos = 0; pos <= 120; pos += 1)
+    {
+      myservo.write(pos);
+      myservo1.write(pos);
+      delay(3);
+    }
+    for (pos = 120; pos >= 0; pos -= 1)
+    {
+      myservo.write(pos);
+      myservo1.write(pos);
+      delay(3);
+    }
+    delay(100);
+  }
+}

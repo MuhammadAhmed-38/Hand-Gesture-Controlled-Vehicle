@@ -1,0 +1,253 @@
+// Transmitter Final Code
+#include <MPU6050.h>
+#include <RH_ASK.h>
+#include <SPI.h> // Not actually used but needed to compile
+#include "Wire.h"
+#include "I2Cdev.h"
+#include "MPU6050.h"
+
+RH_ASK driver;
+MPU6050 mpu;
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
+struct MyData {
+  byte X;
+  byte Y;
+};
+
+MyData data;
+
+void setup()
+{
+    Serial.begin(9600);    // Debugging only
+   
+    if (!driver.init())
+         Serial.println("init failed");
+    Wire.begin();
+    mpu.initialize();
+}
+
+void loop()
+{
+    const char *msg1 = "Forward!";
+    const char *msg2 = "Backward";
+    const char *msg3 = "RightForw";
+    const char *msg4 = "LeftForwa";
+    const char *msg5 = "RightBac";
+    const char *msg6 = "LeftBack";
+    const char *msg7 = "**Stop**";
+    
+    mpu.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+    data.X = map(ax, -17000, 17000, 0, 255); // X axis data
+    data.Y = map(ay, -17000, 17000, 0, 255); // Y axis data
+   
+    if (data.Y < 80) { // Gesture: down
+        if (data.X > 170) { // Gesture: right-forward
+            Serial.println("LEFT FORWARD");
+            driver.send((uint8_t *)msg4, strlen(msg4));
+            delay(1000);
+        } else if (data.X < 85) { // Gesture: left-forward
+            Serial.println("RIGHT FORWARD");
+            driver.send((uint8_t *)msg3, strlen(msg3));
+            delay(1000);
+        } else {
+            Serial.println("FORWARD");
+            driver.send((uint8_t *)msg1, strlen(msg1));
+            delay(1000);
+        }
+    }
+    else if (data.Y > 145) { // Gesture: up
+        if (data.X > 170) { // Gesture: right-backward
+            Serial.println("LEFT BACKWARD");
+            driver.send((uint8_t *)msg5, strlen(msg5));
+            delay(1000);
+        } else if (data.X < 85) { // Gesture: left-backward
+            Serial.println("RIGHT BACKWARD");
+            driver.send((uint8_t *)msg6, strlen(msg6));
+            delay(1000);
+        } else {
+            Serial.println("BACKWARD");
+            driver.send((uint8_t *)msg2, strlen(msg2));
+            delay(1000);
+        }
+    }
+    else if (data.X > 100 && data.X < 170 && data.Y > 80 && data.Y < 130) { // Gesture: little bit down
+        Serial.println("STOP");
+        driver.send((uint8_t *)msg7, strlen(msg7));
+        delay(1000);
+    }
+    
+    driver.waitPacketSent();
+    
+    Serial.print(data.X);
+    Serial.print(" ");
+    Serial.print(data.Y);
+    Serial.print(" ");
+    Serial.print(gx);
+    Serial.print(" ");
+    Serial.print(gy);
+    Serial.print(" ");
+    Serial.print(gz);
+    Serial.println();
+}
+
+
+
+// RECEIVER FINAL CODE
+#include <RH_ASK.h>
+#include <SPI.h> // Not actualy used but needed to compile
+#include <AFMotor.h>
+
+AF_DCMotor motor1(1);
+AF_DCMotor motor2(2);
+AF_DCMotor motor3(3);
+AF_DCMotor motor4(4);
+
+const int TRIG_PIN = A2; // Arduino pin connected to Ultrasonic Sensor's TRIG pin
+const int ECHO_PIN = A3; // Arduino pin connected to Ultrasonic Sensor's ECHO pin
+const int LED_PIN  = A4;
+const int DISTANCE_THRESHOLD = 50; // centimeters
+float duration_us, distance_cm;   // variables will change:
+
+RH_ASK driver;
+
+void setup()
+{
+  pinMode(A0,INPUT);
+  pinMode(A1,INPUT);
+    Serial.begin(9600);  // Debugging only
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(TRIG_PIN, OUTPUT); // set arduino pin to output mode
+    pinMode(ECHO_PIN, INPUT);  // set arduino pin to input mode
+    if (!driver.init())
+         Serial.println("init failed");
+}
+
+void loop()
+{
+  // generate 10-microsecond pulse to TRIG pin
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  // measure duration of pulse from ECHO pin
+  duration_us = pulseIn(ECHO_PIN, HIGH);
+  // calculate the distance
+  distance_cm = 0.017 * duration_us;
+
+  motor1.setSpeed(255);
+  motor2.setSpeed(255);
+  motor3.setSpeed(255);
+  motor4.setSpeed(255);
+  
+  motor1.run(RELEASE);
+  motor2.run(RELEASE);
+  motor3.run(RELEASE);
+  motor4.run(RELEASE); 
+  digitalWrite(LED_PIN, LOW);
+   
+  uint8_t buf[8];
+  uint8_t buflen = sizeof(buf);
+  String x;
+  if (driver.recv(buf, &buflen)) // Non-blocking
+  {
+    int i;
+    // Message with a good checksum received, dump it.
+    Serial.print(" Message Received: ");
+    x=((String)(char*)buf);
+    x.trim();
+    Serial.println(x+ " :"+x.length()); 
+    if(distance_cm < DISTANCE_THRESHOLD)
+    {
+        motor1.setSpeed(255);
+        motor2.setSpeed(255);
+        motor3.setSpeed(255);
+        motor4.setSpeed(255);  
+        motor1.run(RELEASE);
+        motor2.run(RELEASE);
+        motor3.run(RELEASE);
+        motor4.run(RELEASE);
+        Serial.println("Distance is too short! Breaks applied...");
+        digitalWrite(LED_PIN,HIGH);
+    }
+    
+  else
+  {  
+    if(x=="Forward!")
+      {
+          Serial.println("MOVING FORWARD");
+          motor4.setSpeed(250);
+          motor4.setSpeed(250);
+          motor4.setSpeed(250);
+          motor4.setSpeed(250);
+        
+          motor1.run(FORWARD);
+          motor2.run(FORWARD); 
+          motor3.run(FORWARD);
+          motor4.run(FORWARD);
+          delay(1000);
+        }
+               
+    else if(x=="Backward")
+    {
+          Serial.println("MOVING BACKWARD");
+
+          motor1.setSpeed(2000);
+          motor2.setSpeed(2000);
+          motor3.setSpeed(200);
+          motor4.setSpeed(200);
+        
+          motor1.run(BACKWARD);
+          motor2.run(BACKWARD); 
+          motor3.run(BACKWARD);
+          motor4.run(BACKWARD);
+        digitalWrite(LED_PIN,HIGH);
+          delay(1000);
+        }      
+    else if(x=="*Right!*")
+    {  
+      Serial.println("TURNING TOWARDS RIGHT SIDE"); 
+      motor1.setSpeed(2000);
+      motor2.setSpeed(2000);
+      motor3.setSpeed(2000);
+      motor4.setSpeed(2000);
+
+        motor1.run(FORWARD);
+        motor2.run(BACKWARD);
+        motor3.run(BACKWARD);
+        motor4.run(FORWARD);
+      delay(1000);
+    }
+    else if(x=="**Left**")
+    { 
+      Serial.println("TURNING TOWARDS LEFT SIDE");  
+        motor1.setSpeed(2000);
+        motor2.setSpeed(2000);
+        motor3.setSpeed(2000);
+        motor4.setSpeed(2000);
+
+        motor1.run(BACKWARD);
+        motor2.run(FORWARD);
+        motor3.run(FORWARD);
+        motor4.run(BACKWARD);
+        delay(1000);
+    }
+  
+    else if(x=="**Stop**")
+    {  
+        Serial.println("BREAK");
+        motor1.setSpeed(255);
+        motor2.setSpeed(255);
+        motor3.setSpeed(255);
+        motor4.setSpeed(255);
+ 
+        motor1.run(RELEASE);
+        motor2.run(RELEASE); 
+        motor3.run(RELEASE);
+        motor4.run(RELEASE);
+        delay(1000);
+    }   
+  }
+  } 
+}
